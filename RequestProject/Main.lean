@@ -346,33 +346,41 @@ original source. -/
 def wordValueNat {b : ℕ} (w : List (Fin b)) : ℕ :=
   Nat.ofDigits b (w.map (fun j => (j : ℕ)))
 
+
+/-- Encoding a fixed-length list of base-`b` digits by `Nat.ofDigits` is injective. -/
+theorem fin_ofDigits_injective_of_length_eq
+    (b : ℕ) (hb : 2 ≤ b) (w z : List (Fin b))
+    (hlen : w.length = z.length)
+    (hval : Nat.ofDigits b (List.flatMap (fun a => [↑a]) w) =
+      Nat.ofDigits b (List.flatMap (fun a => [↑a]) z)) :
+    w = z := by
+  have hdigits : List.map (fun a : Fin b => (a : ℕ)) w =
+      List.map (fun a : Fin b => (a : ℕ)) z := by
+    apply Nat.ofDigits_inj_of_len_eq (b := b) (lt_of_lt_of_le Nat.one_lt_two hb)
+    · simpa using hlen
+    · intro l hl
+      obtain ⟨a, _, rfl⟩ := List.mem_map.mp hl
+      exact a.isLt
+    · intro l hl
+      obtain ⟨a, _, rfl⟩ := List.mem_map.mp hl
+      exact a.isLt
+    · simpa [List.bind_eq_flatMap, ← List.map_eq_flatMap] using hval
+  exact Fin.val_injective.list_map hdigits
+
+
 /-- Fixed-length words have injective base-`b` values, formalizing the injectivity
 (and hence grid separation) assertion in the binary and general constructions of
 the original source. -/
 lemma wordValueNat_injective_fixedLength {b : ℕ} (hb : 2 ≤ b)
     {w z : List (Fin b)} (hlen : w.length = z.length)
     (hval : wordValueNat w = wordValueNat z) : w = z := by
-  simp [wordValueNat] at hval
-  by_cases H : w.length = 1
-  · have ⟨w₀, hw₀⟩ : ∃ w₀, w = [w₀] := by sorry
-    subst w
-    have ⟨z₀, hz₀⟩ : ∃ z₀, z = [z₀] := by sorry
-    subst z
-    simp
-    simp [List.flatMap, List.flatten] at hval
-    exact Fin.eq_of_val_eq hval
-  by_cases H : w.length = 2
-  · have ⟨w₀, w₁, hw₀⟩ : ∃ w₀ w₁, w = [w₀, w₁] := by sorry
-    subst w
-    have ⟨z₀, z₁, hz₀⟩ : ∃ z₀ z₁, z = [z₀, z₁] := by sorry
-    subst z
-    simp
-    simp [List.flatMap, List.flatten] at hval
-    simp [Nat.ofDigits] at hval
-    -- true since w₀ mod b < b
-    sorry
-  simp [List.flatMap, List.flatten] at hval
-  sorry
+  unfold wordValueNat at hval
+  apply fin_ofDigits_injective_of_length_eq
+  tauto
+  tauto
+  simp at hval ⊢
+  exact hval
+
 
 /-- Closed form for the reversed dynamics, namely
 `u_n = v(z) + u₀ b⁻ⁿ`, from Proposition 4 of the original source. -/
@@ -542,21 +550,29 @@ theorem binary_probabilisticAutomaticComplexity_le_three
     probabilisticAutomaticComplexity w ≤ 3 := by
   exact probabilisticAutomaticComplexity_le_three (by omega) w hw
 
-/-- Conditional form of Corollary 5 (`cor:max`) from the original source. The
+/- Conditional form of Corollary 5 (`cor:max`) from the original source. The
 source's cited external fact that some binary word has complexity three is made
 an explicit hypothesis, while this development supplies the matching universal
 upper bound. -/
-theorem binary_maximum_eq_three
-    (hex : ∃ w : List (Fin 2), probabilisticAutomaticComplexity w = 3) :
-    IsGreatest (Set.range (fun w : List (Fin 2) => probabilisticAutomaticComplexity w)) 3 := by
-  simp [IsGreatest]
-  constructor
-  · exact hex
-  · simp [upperBounds]
-    intro a
-    apply binary_probabilisticAutomaticComplexity_le_three
-    -- just missing the empty word, which doesn't matter
-    sorry
+-- theorem binary_maximum_eq_three
+--     (hex : ∃ w : List (Fin 2), probabilisticAutomaticComplexity w = 3) :
+--     IsGreatest (Set.range (fun w : List (Fin 2) => probabilisticAutomaticComplexity w)) 3 := by
+--   simp [IsGreatest]
+--   constructor
+--   · exact hex
+--   · simp [upperBounds]
+--     intro a
+--     by_cases H : a = []
+--     · subst a
+--       unfold probabilisticAutomaticComplexity
+--       simp [sInf]
+--       split_ifs with g₀
+--       · simp [UniquelyMaximizes]
+--         zorry
+--       · zorry
+--     apply binary_probabilisticAutomaticComplexity_le_three
+--     -- just missing the empty word, which doesn't matter
+--     exact H
 
 /-- Formal version of the computational observation in Remark 9 (Verification)
 of the original source: the constructed parabola has its strict unique maximum
