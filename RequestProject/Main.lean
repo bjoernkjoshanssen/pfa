@@ -458,30 +458,28 @@ lemma acceptance_relabelPFA {α β : Type*} {k : ℕ} (e : α ≃ β)
   have hfinal : (relabelPFA e M).final = M.final := rfl
   simp [acceptance, hrun, hfinal]
 
-lemma half_le_reversedValue
-    (u0 : ℝ) (w : List <| Fin 2) (hu0 : 0 ≤ u0) :
-    1 / 2 ≤ reversedValue 2 u0 (1 :: w).reverse -- whichever ends in 1
+lemma half_le_reversedValue {b : ℕ} (hb : 1 ≤ b)
+    (u0 : ℝ) (w : List <| Fin b.succ) (hu0 : 0 ≤ u0) :
+    1 / 2 ≤ reversedValue b.succ u0 ((Fin.last b) :: w).reverse -- whichever ends in 1
     := by
     unfold reversedValue
     induction w with
-    | nil => simp;field_simp;linarith
+    | nil =>
+        simp;field_simp
+        have : (1 : ℝ) ≤ b := by simp;tauto
+        linarith
     | cons head tail ih =>
         simp at ih ⊢
-        fin_cases head
-        · field_simp
-          conv =>
-            right
-            left
-            right
-            simp only [CharP.cast_eq_zero]
-          simp at ih ⊢
-          set A := List.foldl (fun u j => (u + (@Nat.cast ℝ Real.instNatCast j : ℝ)) / 2) u0 (List.flatMap (fun a => [(@Fin.val 2 a : ℕ)]) tail.reverse)
-          field_simp at ih
-          linarith
-        · set A := List.foldl (fun u j => (u + (@Nat.cast ℝ Real.instNatCast j : ℝ)) / 2) u0 (List.flatMap (fun a => [(@Fin.val 2 a : ℕ)]) tail.reverse)
-          simp
-          field_simp at ih ⊢
-          linarith
+        generalize (fun u j => (u + ↑j) / (↑b + 1) : ℝ → ℕ → ℝ) = A at *
+        generalize (@List.foldl ℝ ℕ A u0 (List.flatMap (fun a => [(@Fin.val (b + 1) a : ℕ)]) tail.reverse) : ℝ) = B at *
+        field_simp at *
+        suffices (↑b + 1) ^ 2 ≤ 2 * (B + ↑b * (↑b + 1)) by linarith
+        clear hu0 head A tail
+        field_simp
+        have : (1 : ℝ) ≤ b := by simp;tauto
+        nlinarith
+
+
 
 /-- A direct three-state witness when the target terminal value is at least
 `1/2`; this is the parabola argument common to Theorem 3 and Proposition 4 in
@@ -489,8 +487,6 @@ the original source. -/
 lemma exists_three_state_of_target_ge_half {b : ℕ} (hb : 2 ≤ b)
     (w : List (Fin b)) (u0 : ℝ) (hu0 : 0 ≤ u0) (hu01 : u0 ≤ 1)
     (ht : 1 / 2 ≤ reversedValue b u0 w) :
-    -- ht seems to be true, but which `u0` to apply this to?
-    -- maybe `u0 = 0`
     ∃ M : PFA (Fin b) 3, UniquelyMaximizes M w := by
   -- Set s = 2 * reversedValue b u0 w, so the parabola max is at u = s/2 = reversedValue b u0 w
   set u_target := reversedValue b u0 w with hu_target_def
@@ -526,9 +522,10 @@ lemma exists_three_state_of_target_ge_half {b : ℕ} (hb : 2 ≤ b)
 Theorem 1 (`thm:main`) of the original source: every nonempty finite word over
 an alphabet of size at least two has probabilistic automatic complexity at most
 three. -/
-theorem probabilisticAutomaticComplexity_le_three --{b : ℕ} (hb : 2 ≤ b)
-    (w : List (Fin 2)) (hw : w ≠ [])
-    (hw' : ∃ v, w = (1 :: v).reverse)
+theorem probabilisticAutomaticComplexity_le_three
+    {b : ℕ} (hb : 1 ≤ b)
+    (w : List (Fin b.succ)) (hw : w ≠ [])
+    (hw' : ∃ v, w = ((Fin.last b) :: v).reverse)
     :
     probabilisticAutomaticComplexity w ≤ 3 := by
   have := @exists_three_state_of_target_ge_half
@@ -537,11 +534,12 @@ theorem probabilisticAutomaticComplexity_le_three --{b : ℕ} (hb : 2 ≤ b)
   split_ifs with g₀
   · simp [UniquelyMaximizes]
     obtain ⟨n,M,hM⟩ := g₀
-    specialize @this 2 (by omega) w 0 (by simp) (by field_simp;simp)
+    specialize @this b.succ (by omega) w 0 (by simp) (by field_simp;simp)
         (by
             obtain ⟨v,hv⟩ := hw'
             subst w
             apply half_le_reversedValue (u0 := 0) (w := v)
+            exact hb
             simp)
 
     use 3, (by simp)
@@ -553,14 +551,16 @@ theorem probabilisticAutomaticComplexity_le_three --{b : ℕ} (hb : 2 ≤ b)
     tauto
   · simp
 
+
 /-- Binary specialization, exactly Theorem 3 (`thm:binary`) of the original
 source. -/
-theorem binary_probabilisticAutomaticComplexity_le_three
-    (w : List (Fin 2)) (hw : w ≠ [])
-    (hw' : ∃ v, w = (1 :: v).reverse)
-    :
+theorem binary_probabilisticAutomaticComplexity_le_three {b : ℕ} (hb : 1 ≤ b)
+    (w : List (Fin b.succ)) (hw : w ≠ [])
+    (hw' : ∃ v, w = ((Fin.last b) :: v).reverse) :
     probabilisticAutomaticComplexity w ≤ 3 := by
-  exact probabilisticAutomaticComplexity_le_three (by omega) hw hw'
+  apply probabilisticAutomaticComplexity_le_three (by omega)
+  exact hw
+  exact hw'
 
 /- Conditional form of Corollary 5 (`cor:max`) from the original source. The
 source's cited external fact that some binary word has complexity three is made
