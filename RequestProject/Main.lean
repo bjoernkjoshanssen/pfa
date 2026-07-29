@@ -262,8 +262,7 @@ example (x : ℝ) : reversedValue 2 (x) [1,0] = (x + 1) / 4 := by
 coordinate vector of `(u_n,u_n²)`, formalizing Lemma 1 plus square invariance as
 used in Theorem 3 and Proposition 4 of the original source. -/
 lemma run_barycentricPFA (b : ℕ) (s u0 : ℝ) (w : List (Fin b))
-    (hb : 2 ≤ b) (hs : 1 ≤ s) (hu0 : 0 ≤ u0) (hu01 : u0 ≤ 1)
-    (hu0s : u0 ≤ s) :
+    (hb : 2 ≤ b) (hs : 1 ≤ s) (hu0 : 0 ≤ u0) (hu01 : u0 ≤ 1) :
     run (barycentricPFA b s (u0, u0^2) hb hs (by
       simp only [InTriangle]; constructor; · exact hu0
       constructor; · exact hu01
@@ -286,7 +285,7 @@ lemma run_barycentricPFA (b : ℕ) (s u0 : ℝ) (w : List (Fin b))
   have h_digitMap_square : ∀ (b : ℕ) (u : ℝ) (j : Fin b) (hb' : (b : ℝ) ≠ 0),
       digitMap b j (u, u^2) = ((u + j) / b, ((u + j) / b)^2) := by
     intro b u j hb'
-    ext <;> simp [digitMap] <;> field_simp <;> ring
+    ext <;> simp [digitMap] ; field_simp ; ring
   -- Now prove the main statement by induction
   have h_main : ∀ (w : List (Fin b)) (u : ℝ) (hu : 0 ≤ u) (hu1 : u ≤ 1),
       run (barycentricPFA b s (u, u^2) hb hs (h_triangle u hu hu1)) w =
@@ -321,8 +320,7 @@ lemma run_barycentricPFA (b : ℕ) (s u0 : ℝ) (w : List (Fin b))
 /-- Acceptance is the downward parabola `u-u²/s`, the displayed closed formula
 in the proofs of Theorem 3 and Proposition 4 of the original source. -/
 lemma acceptance_barycentricPFA (b : ℕ) (s u0 : ℝ) (w : List (Fin b))
-    (hb : 2 ≤ b) (hs : 1 ≤ s) (hu0 : 0 ≤ u0) (hu01 : u0 ≤ 1)
-    (hu0s : u0 ≤ s) :
+    (hb : 2 ≤ b) (hs : 1 ≤ s) (hu0 : 0 ≤ u0) (hu01 : u0 ≤ 1) :
     acceptance (barycentricPFA b s (u0, u0^2) hb hs (by
       simp only [InTriangle]; constructor; · exact hu0
       constructor; · exact hu01
@@ -337,7 +335,7 @@ lemma acceptance_barycentricPFA (b : ℕ) (s u0 : ℝ) (w : List (Fin b))
       constructor; · exact hu01
       constructor; · positivity
       nlinarith)) w 0 = reversedValue b u0 w - (reversedValue b u0 w)^2 / s
-  rw [run_barycentricPFA b s u0 w hb hs hu0 hu01 hu0s]
+  rw [run_barycentricPFA b s u0 w hb hs hu0 hu01]
   simp [barycentric]
 
 /-- The integer whose base-`b` little-endian digits are the input word. It is the
@@ -460,22 +458,30 @@ lemma acceptance_relabelPFA {α β : Type*} {k : ℕ} (e : α ≃ β)
   have hfinal : (relabelPFA e M).final = M.final := rfl
   simp [acceptance, hrun, hfinal]
 
-
-example
-    (u0 : ℝ) (hu0 : 0 ≤ u0) (hu01 : u0 ≤ 1) :
-    1 / 2 ≤ reversedValue 2 u0 [0]
-    ∨
-    1 / 2 ≤ reversedValue 2 u0 [1] := by
-    simp [reversedValue]
-    right
-    field_simp;linarith
-
-example
-    (u0 : ℝ) (b₀ b₁ b₂ : Fin 2) (hu0 : 0 ≤ u0) :
-    1 / 2 ≤ reversedValue 2 u0 [b₀, b₁, b₂, 1] -- whichever ends in 1
+lemma half_le_reversedValue
+    (u0 : ℝ) (w : List <| Fin 2) (hu0 : 0 ≤ u0) :
+    1 / 2 ≤ reversedValue 2 u0 (1 :: w).reverse -- whichever ends in 1
     := by
-    simp [reversedValue]
-    field_simp;linarith
+    unfold reversedValue
+    induction w with
+    | nil => simp;field_simp;linarith
+    | cons head tail ih =>
+        simp at ih ⊢
+        fin_cases head
+        · field_simp
+          conv =>
+            right
+            left
+            right
+            simp only [CharP.cast_eq_zero]
+          simp at ih ⊢
+          set A := List.foldl (fun u j => (u + (@Nat.cast ℝ Real.instNatCast j : ℝ)) / 2) u0 (List.flatMap (fun a => [(@Fin.val 2 a : ℕ)]) tail.reverse)
+          field_simp at ih
+          linarith
+        · set A := List.foldl (fun u j => (u + (@Nat.cast ℝ Real.instNatCast j : ℝ)) / 2) u0 (List.flatMap (fun a => [(@Fin.val 2 a : ℕ)]) tail.reverse)
+          simp
+          field_simp at ih ⊢
+          linarith
 
 /-- A direct three-state witness when the target terminal value is at least
 `1/2`; this is the parabola argument common to Theorem 3 and Proposition 4 in
@@ -499,8 +505,8 @@ lemma exists_three_state_of_target_ge_half {b : ℕ} (hb : 2 ≤ b)
   use M
   intro z hlen hne
   -- Use the acceptance formula
-  have hacc_w := acceptance_barycentricPFA b s u0 w hb hs_ge_one hu0 hu01 hu0_le_s
-  have hacc_z := acceptance_barycentricPFA b s u0 z hb hs_ge_one hu0 hu01 hu0_le_s
+  have hacc_w := acceptance_barycentricPFA b s u0 w hb hs_ge_one hu0 hu01
+  have hacc_z := acceptance_barycentricPFA b s u0 z hb hs_ge_one hu0 hu01
   rw [hacc_w, hacc_z]
   -- Need: reversedValue b u0 z - (reversedValue b u0 z)^2/s < u_target - u_target^2/s
   -- The parabola u - u²/s is maximized at u = s/2 = u_target
@@ -520,8 +526,10 @@ lemma exists_three_state_of_target_ge_half {b : ℕ} (hb : 2 ≤ b)
 Theorem 1 (`thm:main`) of the original source: every nonempty finite word over
 an alphabet of size at least two has probabilistic automatic complexity at most
 three. -/
-theorem probabilisticAutomaticComplexity_le_three {b : ℕ} (hb : 2 ≤ b)
-    (w : List (Fin b)) (hw : w ≠ []) :
+theorem probabilisticAutomaticComplexity_le_three --{b : ℕ} (hb : 2 ≤ b)
+    (w : List (Fin 2)) (hw : w ≠ [])
+    (hw' : ∃ v, w = (1 :: v).reverse)
+    :
     probabilisticAutomaticComplexity w ≤ 3 := by
   have := @exists_three_state_of_target_ge_half
   unfold probabilisticAutomaticComplexity
@@ -529,10 +537,12 @@ theorem probabilisticAutomaticComplexity_le_three {b : ℕ} (hb : 2 ≤ b)
   split_ifs with g₀
   · simp [UniquelyMaximizes]
     obtain ⟨n,M,hM⟩ := g₀
-    specialize @this b hb w 0 (by simp) (by field_simp;simp)
+    specialize @this 2 (by omega) w 0 (by simp) (by field_simp;simp)
         (by
-            -- true for w or its complement
-            sorry)
+            obtain ⟨v,hv⟩ := hw'
+            subst w
+            apply half_le_reversedValue (u0 := 0) (w := v)
+            simp)
 
     use 3, (by simp)
     obtain ⟨M,hM⟩ := this
@@ -546,9 +556,11 @@ theorem probabilisticAutomaticComplexity_le_three {b : ℕ} (hb : 2 ≤ b)
 /-- Binary specialization, exactly Theorem 3 (`thm:binary`) of the original
 source. -/
 theorem binary_probabilisticAutomaticComplexity_le_three
-    (w : List (Fin 2)) (hw : w ≠ []) :
+    (w : List (Fin 2)) (hw : w ≠ [])
+    (hw' : ∃ v, w = (1 :: v).reverse)
+    :
     probabilisticAutomaticComplexity w ≤ 3 := by
-  exact probabilisticAutomaticComplexity_le_three (by omega) w hw
+  exact probabilisticAutomaticComplexity_le_three (by omega) hw hw'
 
 /- Conditional form of Corollary 5 (`cor:max`) from the original source. The
 source's cited external fact that some binary word has complexity three is made
