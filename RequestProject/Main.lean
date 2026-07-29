@@ -94,15 +94,9 @@ lemma barycentric_reconstruct {s : ℝ} (hs : s ≠ 0) (x : ℝ × ℝ) :
     (∑ i, barycentric s x i * (vertex s i).1,
       ∑ i, barycentric s x i * (vertex s i).2) = x := by
   simp [barycentric]
-  by_cases H : x = (2,-3)
-  · subst x;simp
-    constructor
-    · rw [Fin.sum_univ_three]
-      simp [vertex]
-    · rw [Fin.sum_univ_three]
-      simp [vertex]
-      field_simp
-  · sorry
+  repeat rw [Fin.sum_univ_three]
+  simp [vertex]
+  field_simp
 
 /-- The square relation `q=u²` is invariant under `g_j`, as stated at the start
 of both the binary construction and Proposition 4 in the original source. -/
