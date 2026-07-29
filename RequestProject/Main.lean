@@ -359,6 +359,24 @@ lemma wordValueNat_injective_fixedLength {b : ℕ} (hb : 2 ≤ b)
     {w z : List (Fin b)} (hlen : w.length = z.length)
     (hval : wordValueNat w = wordValueNat z) : w = z := by
   simp [wordValueNat] at hval
+  by_cases H : w.length = 1
+  · have ⟨w₀, hw₀⟩ : ∃ w₀, w = [w₀] := by sorry
+    subst w
+    have ⟨z₀, hz₀⟩ : ∃ z₀, z = [z₀] := by sorry
+    subst z
+    simp
+    simp [List.flatMap, List.flatten] at hval
+    exact Fin.eq_of_val_eq hval
+  by_cases H : w.length = 2
+  · have ⟨w₀, w₁, hw₀⟩ : ∃ w₀ w₁, w = [w₀, w₁] := by sorry
+    subst w
+    have ⟨z₀, z₁, hz₀⟩ : ∃ z₀ z₁, z = [z₀, z₁] := by sorry
+    subst z
+    simp
+    simp [List.flatMap, List.flatten] at hval
+    simp [Nat.ofDigits] at hval
+    -- true since w₀ mod b < b
+    sorry
   simp [List.flatMap, List.flatten] at hval
   sorry
 
