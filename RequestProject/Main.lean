@@ -124,20 +124,108 @@ lemma digitMap_mem_triangle {b j : ℕ} {s : ℝ} (hb : 2 ≤ b) (hj : j < b)
     · simp
   · constructor
     · field_simp
-      have : j + 1 ≤ b := by exact Order.add_one_le_iff.mpr hj
-      have : j ≤ b - 1 := by exact Nat.le_sub_one_of_lt hj
+      have h₀ : j + 1 ≤ b := by exact Order.add_one_le_iff.mpr hj
+      have h₁ : j ≤ b - 1 := by exact Nat.le_sub_one_of_lt hj
       have : x.1 + j ≤ 1 + (b - 1) := by
         refine add_le_add ?_ ?_
         linarith
         have : (j : ℝ) ≤ (b - 1) := by
             by_cases H : b = 0
             · subst H;simp at hj
-            · suffices (j : ℝ) + 1 ≤ b by exact le_tsub_of_add_le_right this
+            · suffices ((j + 1) : ℝ) ≤ b by exact le_tsub_of_add_le_right this
 
-              sorry
+              have := @Nat.cast_le ℝ _ _ _ _ _ (j + 1) b
+              simp at this ⊢
+              tauto
         simp;linarith
       linarith
-    · sorry
+    · constructor
+      · apply div_nonneg
+        · nlinarith
+        · simp
+      · field_simp
+        generalize x.1 = X at *
+        generalize x.2 = Y at *
+        have hx₀ := hx.1
+        have hx₁ := hx.2.1
+        have hx₂ := hx.2.2.1
+        have hx₃ := hx.2.2.2
+        clear hx
+        have hbR : (2 : ℝ) ≤ b := by simp;tauto
+        clear hb
+        have hjR : j + 1 ≤ (b : ℝ) := by
+            simp_all
+            have : j + 1 ≤ b := by exact Order.add_one_le_iff.mpr hj
+            clear hbR hx₃ hx₂ hx₁ hx₀ X Y x hs hj s
+            have := @Nat.cast_le ℝ _ _ _ _ _ (j + 1) b
+            simp at this ⊢
+            tauto
+        clear hj
+        have hj₀ : 0 ≤ (j : ℝ) := by simp
+        generalize (j : ℝ) = J at *
+        clear j
+        generalize (b : ℝ) = B at *
+        clear b
+        clear x
+        ring_nf
+        field_simp
+
+        by_cases H : B = 2
+        · subst B;simp_all
+          nlinarith
+        by_cases H : B = J + 1
+        · subst B
+          ring_nf
+          clear H hjR
+          have : 0 ≤ J * X + J + J ^ 2 := by nlinarith
+          nlinarith
+        suffices s * X + 2 * J * X + J ^ 2 ≤ (max 2 (J+1)) * s * (X + J) by
+          -- two cases for the max
+          have : max 2 (J+1) = 2 ∨
+            max 2 (J+1) = J + 1 := by exact Std.MaxEqOr.max_eq_or 2 (J + 1)
+          cases this with
+          | inl h =>
+            ring_nf
+            suffices s * X + J * X * 2 + J ^ 2 ≤ (J * B + X * B) * s by linarith
+            suffices J * X * 2 + J ^ 2 ≤ (J * B + X * B - X) * s by linarith
+            suffices J * X * 2 + J ^ 2 ≤ (J * B + X * B - X) * 1 by
+                apply le_trans this
+                refine mul_le_mul_of_nonneg ?_ hs ?_ ?_
+                nlinarith
+                nlinarith
+                nlinarith
+            nlinarith
+          | inr h =>
+            have : 2 ≤ J + 1 := by exact le_of_sup_eq h
+            suffices J * X * 2 + J ^ 2 ≤ s * (B * (J + X) - X) by
+                linarith
+            suffices J * X * 2 + J ^ 2 ≤ 1 * (B * (J + X) - X) by
+                apply le_trans this
+                refine mul_le_mul_of_nonneg ?_ ?_ ?_ ?_
+                nlinarith
+                nlinarith
+                nlinarith
+                ring_nf
+                apply add_nonneg
+                positivity
+                simp
+                have : 1 ≤ B := by linarith
+                nlinarith
+            simp
+            suffices J * X * 2 + J ^ 2 ≤ (J+1) * (J + X) - X by nlinarith
+            field_simp
+            ring_nf
+            suffices  J * X * 2 ≤ J + J * X by linarith
+            nlinarith
+        have : max 2 (J+1) = 2 ∨
+            max 2 (J+1) = J + 1 := by exact Std.MaxEqOr.max_eq_or 2 (J + 1)
+        cases this with
+        | inl h => simp_all;nlinarith
+        | inr h =>
+            rw [h]
+            ring_nf
+            have : 0 ≤ J * X + J + J ^ 2 := by nlinarith
+            nlinarith
 
 /-- The explicit three-state automaton obtained by taking barycentric coordinates
 of images of vertices, exactly as in Lemma 1 and Proposition 4 of the original
